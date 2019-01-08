@@ -4,13 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".Main2Activity">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
         <Button
-            android:id="@+id/button_start"
+            android:id="@+id/button_start1"
             android:layout_width="match_parent"
             android:layout_height="49dp"
             android:text="启动服务"
@@ -18,41 +18,58 @@
             android:layout_marginHorizontal="10dp"/>
 
         <Button
-            android:id="@+id/button_reset"
+            android:id="@+id/button_reset1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="重置时间"
-            android:layout_below="@+id/button_start"
+            android:layout_below="@+id/button_start1"
             android:layout_marginHorizontal="10dp"/>
 
         <Button
-            android:id="@+id/button_end"
+            android:id="@+id/button_end1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="结束服务"
-            android:layout_below="@+id/button_reset"
+            android:layout_below="@+id/button_reset1"
+            android:layout_marginHorizontal="10dp"/>
+
+        <Button
+            android:id="@+id/button_test"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="test"
+            android:layout_below="@+id/button_end1"
+            android:layout_marginHorizontal="10dp"/>
+
+        <Button
+            android:id="@+id/button_stop1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="结束服务"
+            android:layout_below="@+id/button_test"
             android:layout_marginHorizontal="10dp"/>
 
         <TextView
-            android:id="@+id/textView"
+            android:id="@+id/textView1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:padding="10dp"
-            android:layout_below="@+id/button_end"
+            android:layout_below="@+id/button_stop1"
             android:gravity="center_vertical|right"
             android:text="提醒间隔:" />
 
         <EditText
-            android:id="@+id/editText"
+            android:id="@+id/editText2"
             android:layout_width="60dp"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/button_end"
-            android:layout_toEndOf="@+id/textView"
+            android:layout_below="@+id/button_stop1"
+            android:layout_toEndOf="@+id/textView1"
             android:inputType="textPersonName"
             android:gravity="right"
             android:text="10"
             android:digits="1234567890" />
 
     </RelativeLayout>
+
 </android.support.constraint.ConstraintLayout>

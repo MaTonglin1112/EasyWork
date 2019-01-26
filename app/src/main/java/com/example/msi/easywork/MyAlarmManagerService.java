@@ -1,19 +1,17 @@
 package com.example.msi.easywork;
 
-import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Toast;
 
@@ -25,17 +23,48 @@ public class MyAlarmManagerService extends Service {
     private MyBinder myBinder = new MyBinder();
 
     private int curTime = 0;    //计时因子
-    private String mode = "已用时 ";   //语音模板
-    private int durTime = 2 * 60 * 1000;   //单位: 分钟
-    private int handlerTime = 5000; //定时轮询时间
-    private boolean isScreenOn = false;
+    private long startTime = 0;    //起始时间
+    private int nextTime = 0;    //计时因子
+    private long pauseTime = 0;    //暂停时间
+    private int durTime = 2 * 60;   //单位: 分钟
 
-    private AlarmManager manager;
-    private PendingIntent pi;
     private NotificationCompat.Builder builder;
+    private Handler handler = new Handler();
 
     private TextToSpeech textToSpeech;
     private boolean isRunning = false;
+
+    Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isRunning) {
+
+                nextTime = (int) (SystemClock.elapsedRealtime() - startTime) / 1000;
+                if (nextTime > curTime) {
+                    curTime = nextTime;
+                    System.out.println("com.example.msi.easywork.MyService.InnerRunable.running----------" + curTime);
+                    if (curTime != 0 && curTime % durTime == 0) {
+                        //语音模板
+                        String mode = "已用时间 ";
+                        speak(mode + getMinate(curTime));
+                    }
+                    PowerManager systemService = (PowerManager) getSystemService(POWER_SERVICE);
+                    assert systemService != null;
+                    boolean isScreenOn = systemService.isInteractive();
+                    System.out.println("isScreenOn + " + isScreenOn);
+                    if (isScreenOn) {
+                        builder.setContentText(getHourMinite(curTime));
+                        //将服务置于启动状态 NOTIFICATION_ID指的是创建的通知的ID
+                        startForeground(NOTIFICATION_ID, builder.build());
+                    }
+                }
+
+                //定时轮询时间
+                int handlerTime = 500;
+                handler.postDelayed(this, handlerTime);
+            }
+        }
+    };
 
     public MyAlarmManagerService() {
     }
@@ -53,11 +82,8 @@ public class MyAlarmManagerService extends Service {
                 }
             }
         });
-        manager = (AlarmManager) getSystemService(ALARM_SERVICE);
-        Intent i = new Intent(this, AlarmReceiver.class);
-        pi = PendingIntent.getBroadcast(this, 0, i, 0);
 
-        Intent intent = new Intent(this, MyAlarmManagerService.class);
+        Intent intent = new Intent(this, Main2Activity.class);
         PendingIntent activity = PendingIntent.getActivity(this, 0, intent, 0);
         //设定的通知渠道名称
         String channelName = getString(R.string.channel_name);
@@ -89,53 +115,21 @@ public class MyAlarmManagerService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public int onStartCommand(Intent intent, int flags, final int startId) {
+        System.out.println("com.example.msi.easywork.MyAlarmManagerService.onStartCommand");
         isRunning = true;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("com.example.msi.easywork.MyService.InnerRunable.running----------" + curTime);
-                if (curTime != 0 && curTime % durTime == 0) {
-                    speak(mode + getMinate(curTime));
-                }
-                PowerManager systemService = (PowerManager) getSystemService(POWER_SERVICE);
-                assert systemService != null;
-                isScreenOn = systemService.isInteractive();
-                System.out.println("isScreenOn + " + isScreenOn);
-                if (isScreenOn) {
-                    builder.setContentText(getHourMinite(curTime));
-                    //将服务置于启动状态 NOTIFICATION_ID指的是创建的通知的ID
-                    startForeground(NOTIFICATION_ID, builder.build());
-                }
-                curTime += handlerTime;
-            }
-        }).start();
-
-        long triggerAtTime = SystemClock.elapsedRealtime() + handlerTime;
-        manager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtTime, pi);
+        initStartTime();
+        new Thread(runnable).start();
         return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
     public void onDestroy() {
         System.out.println("com.example.msi.easywork.MyAlarmManagerService.onDestroy");
+        isRunning = false;
         textToSpeech.stop();
         textToSpeech.shutdown();
         super.onDestroy();
-    }
-
-    /**
-     * 启动服务
-     */
-    public void startSer() {
-        if (isRunning) {
-            Toast.makeText(this, "服务已启动!", Toast.LENGTH_SHORT).show();
-        } else {
-            isRunning = true;
-            long triggerAtTime = SystemClock.elapsedRealtime() + 1000;
-            manager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtTime, handlerTime, pi);
-            Toast.makeText(this, "服务启动!", Toast.LENGTH_SHORT).show();
-        }
     }
 
     /**
@@ -143,12 +137,14 @@ public class MyAlarmManagerService extends Service {
      */
     public void stopLoop() {
         if (isRunning) {
-            manager.cancel(pi);
             isRunning = false;
+            pauseTime = SystemClock.elapsedRealtime();
+            handler.removeCallbacks(runnable);
             Toast.makeText(this, "服务已停止!", Toast.LENGTH_SHORT).show();
         } else {
+            startTime += (SystemClock.elapsedRealtime() - pauseTime);
             isRunning = true;
-            manager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), pi);
+            new Thread(runnable).start();
             Toast.makeText(this, "服务继续运行!", Toast.LENGTH_SHORT).show();
         }
     }
@@ -157,8 +153,8 @@ public class MyAlarmManagerService extends Service {
      * 终止后台服务
      */
     public void stopService() {
-        manager.cancel(pi);
         isRunning = false;
+        handler.removeCallbacks(runnable);
         stopForeground(true);
         Toast.makeText(this, "服务已清除!", Toast.LENGTH_SHORT).show();
     }
@@ -169,6 +165,7 @@ public class MyAlarmManagerService extends Service {
      */
     public void resetTime() {
         if (isRunning) {
+            startTime = SystemClock.elapsedRealtime();
             curTime = 0;
             Toast.makeText(this, "时间重置成功!", Toast.LENGTH_SHORT).show();
         } else {
@@ -180,6 +177,13 @@ public class MyAlarmManagerService extends Service {
         return isRunning;
     }
 
+    /**
+     * 初始化时间
+     */
+    public void initStartTime() {
+        startTime = SystemClock.elapsedRealtime();
+    }
+
     class MyBinder extends Binder {
         MyAlarmManagerService getService() {
             return MyAlarmManagerService.this;
@@ -187,10 +191,10 @@ public class MyAlarmManagerService extends Service {
     }
 
     private String getHourMinite(int curTime) {
-        int hour = curTime / 3600000;
-        int tmp = curTime % 3600000;
-        int min = (tmp) / 60000;
-        int second = (tmp % 60000) / 1000;
+        int hour = curTime / 3600;
+        int tmp = curTime % 3600;
+        int min = tmp / 60;
+        int second = tmp % 60;
         return hour + ":" + min + ":" + second;
     }
 
@@ -205,12 +209,12 @@ public class MyAlarmManagerService extends Service {
      * @return
      */
     private String getMinate(int curTime) {
-        int hour = curTime / 3600000;
-        int i = (curTime % 3600000) / 60000;
+        int hour = curTime / 3600;
+        int i = (curTime % 3600) / 60;
         return hour > 0 ? hour + "小时" + (i == 0 ? "" : i + "分钟") : i + "分钟";
     }
 
     public void setDurTime(Integer integer) {
-        durTime = integer * 60 * 1000;
+        durTime = integer * 60;
     }
 }

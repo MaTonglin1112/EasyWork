@@ -29,16 +29,8 @@
             android:id="@+id/button_end1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="结束服务"
+            android:text="暂停服务"
             android:layout_below="@+id/button_reset1"
-            android:layout_marginHorizontal="10dp"/>
-
-        <Button
-            android:id="@+id/button_test"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="test"
-            android:layout_below="@+id/button_end1"
             android:layout_marginHorizontal="10dp"/>
 
         <Button
@@ -46,7 +38,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="结束服务"
-            android:layout_below="@+id/button_test"
+            android:layout_below="@+id/button_end1"
             android:layout_marginHorizontal="10dp"/>
 
         <TextView
